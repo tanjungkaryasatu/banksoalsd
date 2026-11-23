@@ -44,7 +44,7 @@
                     SD6
                 </div>
                 <div>
-                    <h1 class="font-bold text-sm sm:text-base leading-tight tracking-wide">BANK SOAL LATIHAN ASESMEN </h1>
+                    <h1 class="font-bold text-sm sm:text-base leading-tight tracking-wide">BANK SOAL LATIHAN ASESMEN</h1>
                     <p class="text-[11px] sm:text-xs text-blue-200">Kelas 6 SD | ASAS dan PSAJ</p>
                 </div>
             </div>
@@ -100,7 +100,10 @@
                         <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Kelas <span class="text-red-500">*</span></label>
                         <select id="input-class" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 outline-none text-sm font-medium bg-white">
                             <option value="">-- Pilih Kelas --</option>
-                            <option value="6A">Kelas 6</option>
+                            <option value="6A">Kelas 6A</option>
+                            <option value="6B">Kelas 6B</option>
+                            <option value="6C">Kelas 6C</option>
+                            <option value="6D">Kelas 6D</option>
                         </select>
                     </div>
                     <div>
@@ -543,36 +546,24 @@
         // =========================================================================
         // KONFIGURASI CLOUD FIREBASE (TEMPELKAN CONFIG MILIK ANDA DI SINI)
         // =========================================================================
-        // Jika di-hosting mandiri (GitHub Pages / Vercel / Netlify), ganti nilai
-        // MANUAL_FIREBASE_CONFIG di bawah ini dengan objek firebaseConfig dari
-        // Firebase Console milik Anda.
         const MANUAL_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyCGqJ1WgIZCaNVxTjlhEJVHS84v5NAiwz0",
-  authDomain: "asesmen-sd.firebaseapp.com",
-  projectId: "asesmen-sd",
-  storageBucket: "asesmen-sd.firebasestorage.app",
-  messagingSenderId: "316974048635",
-  appId: "1:316974048635:web:2c985ea61b6c6793ae89de"
-};
-        /* CONTOH PENGISIAN SAAT HOSTING MANDIRI:
-        const MANUAL_FIREBASE_CONFIG = {
-            apiKey: "AIzaSy...",
-            authDomain: "proyek-anda.firebaseapp.com",
-            projectId: "proyek-anda",
-            storageBucket: "proyek-anda.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:abcdef"
+            apiKey: "AIzaSyCGqJ1WgIZCaNVxTjlhEJVHS84v5NAiwz0",
+            authDomain: "asesmen-sd.firebaseapp.com",
+            projectId: "asesmen-sd",
+            storageBucket: "asesmen-sd.firebasestorage.app",
+            messagingSenderId: "316974048635",
+            appId: "1:316974048635:web:2c985ea61b6c6793ae89de"
         };
-        */
 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'asesmen-sd6-sekolah';
         let db = null;
         let auth = null;
         let currentUser = null;
+        const usingManualConfig = Boolean(MANUAL_FIREBASE_CONFIG && MANUAL_FIREBASE_CONFIG.apiKey);
 
         try {
             let activeConfig = null;
-            if (MANUAL_FIREBASE_CONFIG && MANUAL_FIREBASE_CONFIG.apiKey) {
+            if (usingManualConfig) {
                 activeConfig = MANUAL_FIREBASE_CONFIG;
             } else if (typeof __firebase_config !== 'undefined' && __firebase_config) {
                 activeConfig = JSON.parse(__firebase_config);
@@ -759,6 +750,7 @@
 
         // 3. STATE APLIKASI UJIAN
         let state = {
+            isExamActive: false,
             studentName: '',
             studentClass: '',
             examType: '',
@@ -772,10 +764,97 @@
             fontSize: 'base'
         };
 
+        // === KEAMANAN ANTI-REFRESH (AUTO-SAVE & RESTORE SESSION) ===
+        const EXAM_SESSION_KEY = 'asesmen_sd6_active_session_v1';
+
+        function saveExamSession() {
+            if (!state.isExamActive || !state.questions || state.questions.length === 0) return;
+            try {
+                const sessionPayload = {
+                    isExamActive: true,
+                    studentName: state.studentName,
+                    studentClass: state.studentClass,
+                    examType: state.examType,
+                    selectedSubjectId: state.selectedSubjectId,
+                    questions: state.questions,
+                    currentIndex: state.currentIndex,
+                    answers: state.answers,
+                    doubts: state.doubts,
+                    remainingSeconds: state.remainingSeconds,
+                    fontSize: state.fontSize,
+                    savedAt: Date.now()
+                };
+                localStorage.setItem(EXAM_SESSION_KEY, JSON.stringify(sessionPayload));
+            } catch (e) {
+                console.warn('Gagal menyimpan sesi lokal:', e);
+            }
+        }
+
+        function clearExamSession() {
+            try {
+                localStorage.removeItem(EXAM_SESSION_KEY);
+            } catch (e) {
+                console.warn('Gagal menghapus sesi lokal:', e);
+            }
+        }
+
+        function restoreExamSession() {
+            try {
+                const raw = localStorage.getItem(EXAM_SESSION_KEY);
+                if (!raw) return false;
+
+                const saved = JSON.parse(raw);
+                if (!saved || !saved.isExamActive || !Array.isArray(saved.questions) || saved.questions.length === 0 || saved.remainingSeconds <= 0) {
+                    clearExamSession();
+                    return false;
+                }
+
+                state.isExamActive = true;
+                state.studentName = saved.studentName || '';
+                state.studentClass = saved.studentClass || '';
+                state.examType = saved.examType || '';
+                state.selectedSubjectId = saved.selectedSubjectId || '';
+                state.questions = saved.questions;
+                state.currentIndex = saved.currentIndex || 0;
+                state.answers = saved.answers || {};
+                state.doubts = saved.doubts || {};
+                state.remainingSeconds = saved.remainingSeconds;
+                state.fontSize = saved.fontSize || 'base';
+
+                const subObj = SUBJECTS.find(s => s.id === state.selectedSubjectId) || { name: 'Latihan Asesmen' };
+                document.getElementById('header-student-info').textContent = `${state.studentName} • Kelas ${state.studentClass}`;
+                document.getElementById('header-subject-info').textContent = `${subObj.name} (${state.examType})`;
+                document.getElementById('header-exam-info').classList.remove('hidden');
+                document.getElementById('btn-teacher-guide').classList.add('hidden');
+
+                document.getElementById('screen-setup').classList.add('hidden');
+                document.getElementById('screen-result').classList.add('hidden');
+                document.getElementById('screen-exam').classList.remove('hidden');
+
+                setFontSize(state.fontSize);
+                startTimer();
+                renderQuestion();
+                renderNavGrid();
+                return true;
+            } catch (err) {
+                clearExamSession();
+                return false;
+            }
+        }
+
+        window.addEventListener('beforeunload', (e) => {
+            if (state.isExamActive) {
+                saveExamSession();
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
         // 4. INISIALISASI CLOUD & HALAMAN AWAL
         async function initCloudAndApp() {
             populateRekapSubjectFilter();
             renderSubjectCards();
+            restoreExamSession();
 
             if (!auth || !db) {
                 const badge = document.getElementById('cloud-status-badge');
@@ -788,13 +867,21 @@
             }
 
             try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                if (!usingManualConfig && typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
                     await signInAnonymously(auth);
                 }
             } catch (authErr) {
-                console.error('Auth error:', authErr);
+                if (authErr && authErr.code === 'auth/custom-token-mismatch') {
+                    try {
+                        await signInAnonymously(auth);
+                    } catch (fallbackErr) {
+                        console.error('Fallback anonymous auth error:', fallbackErr);
+                    }
+                } else {
+                    console.error('Auth error:', authErr);
+                }
             }
 
             onAuthStateChanged(auth, (user) => {
@@ -825,7 +912,6 @@
                     snapshot.forEach((docSnap) => {
                         list.push({ id: docSnap.id, ...docSnap.data() });
                     });
-                    // Urutkan terbaru di atas secara in-memory
                     list.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
                     studentScoresList = list;
 
@@ -851,6 +937,7 @@
 
         function renderSubjectCards() {
             const grid = document.getElementById('subject-grid');
+            if (!grid) return;
             grid.innerHTML = SUBJECTS.map(sub => {
                 const hasCustom = Array.isArray(QUESTION_BANK[sub.id]) && QUESTION_BANK[sub.id].length > 0;
                 const badgeText = hasCustom ? `${QUESTION_BANK[sub.id].length} Soal Tersedia` : 'Paket Simulasi Demo';
@@ -898,12 +985,12 @@
                 return;
             }
 
+            state.isExamActive = true;
             state.studentName = name;
             state.studentClass = cls;
             state.examType = examType;
 
             let rawBank = QUESTION_BANK[state.selectedSubjectId] || QUESTION_BANK.default;
-            // Filter sesuai jenis asesmen jika kolom Jenis_Asesmen diisi pada Excel
             const filteredByType = rawBank.filter(q => !q.examType || q.examType.toLowerCase() === examType.toLowerCase());
             const finalQuestions = filteredByType.length > 0 ? filteredByType : rawBank;
 
@@ -912,6 +999,8 @@
             state.answers = {};
             state.doubts = {};
             state.remainingSeconds = 45 * 60;
+
+            saveExamSession();
 
             const subObj = SUBJECTS.find(s => s.id === state.selectedSubjectId);
             document.getElementById('header-student-info').textContent = `${state.studentName} • Kelas ${state.studentClass}`;
@@ -935,6 +1024,7 @@
             state.timerInterval = setInterval(() => {
                 state.remainingSeconds--;
                 updateTimerUI();
+                saveExamSession();
                 if (state.remainingSeconds <= 0) {
                     clearInterval(state.timerInterval);
                     finishExam();
@@ -971,7 +1061,6 @@
             };
             document.getElementById('q-type-badge').textContent = typeLabels[q.type] || q.type;
 
-            // Stimulus & Gambar Soal
             const stimContainer = document.getElementById('q-stimulus-container');
             if (q.stimulus || q.image) {
                 stimContainer.classList.remove('hidden');
@@ -997,7 +1086,6 @@
 
             document.getElementById('q-text').textContent = q.question;
 
-            // Render Area Jawaban Sesuai Tipe Soal
             const ansArea = document.getElementById('q-answer-area');
             const savedAns = state.answers[state.currentIndex];
 
@@ -1077,7 +1165,6 @@
                 `;
             }
 
-            // Update status tombol ragu-ragu & navigasi bawah
             document.getElementById('check-doubt').checked = !!state.doubts[state.currentIndex];
             document.getElementById('btn-prev').disabled = state.currentIndex === 0;
 
@@ -1140,6 +1227,7 @@
         // 7. SIMPAN JAWABAN & KONTROL NAVIGASI
         function savePG(optionIdx) {
             state.answers[state.currentIndex] = optionIdx;
+            saveExamSession();
             renderQuestion();
         }
 
@@ -1151,6 +1239,7 @@
                 arr.push(optionIdx);
             }
             state.answers[state.currentIndex] = arr;
+            saveExamSession();
             renderQuestion();
         }
 
@@ -1160,27 +1249,32 @@
                 : {};
             obj[pairIdx] = value;
             state.answers[state.currentIndex] = obj;
+            saveExamSession();
             renderNavGrid();
         }
 
         function saveTextAnswer(val) {
             state.answers[state.currentIndex] = val;
+            saveExamSession();
             renderNavGrid();
         }
 
         function toggleDoubt() {
             state.doubts[state.currentIndex] = document.getElementById('check-doubt').checked;
+            saveExamSession();
             renderNavGrid();
         }
 
         function jumpToQuestion(idx) {
             state.currentIndex = idx;
+            saveExamSession();
             renderQuestion();
         }
 
         function prevQuestion() {
             if (state.currentIndex > 0) {
                 state.currentIndex--;
+                saveExamSession();
                 renderQuestion();
             }
         }
@@ -1188,16 +1282,19 @@
         function nextQuestion() {
             if (state.currentIndex < state.questions.length - 1) {
                 state.currentIndex++;
+                saveExamSession();
                 renderQuestion();
             }
         }
 
         function setFontSize(size) {
+            state.fontSize = size;
             const container = document.getElementById('question-content-wrapper');
             container.classList.remove('text-sm', 'text-base', 'text-lg');
             if (size === 'sm') container.classList.add('text-sm');
             else if (size === 'lg') container.classList.add('text-lg');
             else container.classList.add('text-base');
+            saveExamSession();
         }
 
         // 8. KONFIRMASI SELESAI, PENILAIAN & UCAPAN PROPORSIONAL
@@ -1222,6 +1319,8 @@
         function finishExam() {
             closeConfirmModal();
             clearInterval(state.timerInterval);
+            state.isExamActive = false;
+            clearExamSession();
 
             let totalMax = 0;
             let totalEarned = 0;
@@ -1350,9 +1449,8 @@
                 `;
             });
 
-            // Hitung Nilai Akhir Skala 0-100
             const finalScore = totalMax > 0 ? Math.round((totalEarned / totalMax) * 100) : 0;
-            const subObj = SUBJECTS.find(s => s.id === state.selectedSubjectId);
+            const subObj = SUBJECTS.find(s => s.id === state.selectedSubjectId) || { name: 'Mata Pelajaran' };
 
             document.getElementById('res-student-sentence').innerHTML =
                 `Nilai akhir ananda <strong class="underline decoration-white/60">${state.studentName}</strong> (${state.studentClass}) adalah:`;
@@ -1361,7 +1459,6 @@
             document.getElementById('res-points-detail').textContent = `${totalEarned} / ${totalMax}`;
             document.getElementById('res-correct-count').textContent = `${correctCount} dari ${state.questions.length} Soal`;
 
-            // Ucapan Motivasi Proporsional (0-69, 70-89, 90-100)
             const banner = document.getElementById('result-banner');
             const badgeEl = document.getElementById('res-motivation-badge');
             const titleEl = document.getElementById('res-motivation-title');
@@ -1390,7 +1487,6 @@
 
             document.getElementById('review-container').innerHTML = reviewHTML;
 
-            // Simpan hasil nilai siswa ke Cloud Firestore secara otomatis
             saveScoreToCloud({
                 studentName: state.studentName,
                 studentClass: state.studentClass,
@@ -1424,6 +1520,8 @@
         }
 
         function resetToHome() {
+            state.isExamActive = false;
+            clearExamSession();
             document.getElementById('screen-result').classList.add('hidden');
             document.getElementById('screen-setup').classList.remove('hidden');
             document.getElementById('btn-teacher-guide').classList.remove('hidden');
@@ -1510,6 +1608,7 @@
             const statusEl = document.getElementById('custom-bank-status');
             const btnReset = document.getElementById('btn-reset-bank');
             const btnExport = document.getElementById('btn-export-js');
+            if (!statusEl) return;
 
             const mapelKeys = Object.keys(cloudQuestionBank);
             if (mapelKeys.length > 0) {
@@ -1527,7 +1626,7 @@
         function downloadTemplateXLSX() {
             const sampleRows = [
                 {
-                    Kode_Mapel: 'ipa',
+                    Kode_Mapel: 'ipas',
                     Jenis_Asesmen: 'ASAS Semester 1',
                     Tipe_Soal: 'pg',
                     Poin: 10,
@@ -1544,7 +1643,7 @@
                     Link_Gambar_Pembahasan: ''
                 },
                 {
-                    Kode_Mapel: 'ipa',
+                    Kode_Mapel: 'ipas',
                     Jenis_Asesmen: 'ASAS Semester 1',
                     Tipe_Soal: 'pgk',
                     Poin: 20,
@@ -1561,7 +1660,7 @@
                     Link_Gambar_Pembahasan: ''
                 },
                 {
-                    Kode_Mapel: 'ipa',
+                    Kode_Mapel: 'ipas',
                     Jenis_Asesmen: 'ASAS Semester 1',
                     Tipe_Soal: 'matching',
                     Poin: 25,
@@ -1578,7 +1677,7 @@
                     Link_Gambar_Pembahasan: ''
                 },
                 {
-                    Kode_Mapel: 'ipa',
+                    Kode_Mapel: 'ipas',
                     Jenis_Asesmen: 'ASAS Semester 1',
                     Tipe_Soal: 'short',
                     Poin: 20,
@@ -1595,7 +1694,7 @@
                     Link_Gambar_Pembahasan: ''
                 },
                 {
-                    Kode_Mapel: 'ipa',
+                    Kode_Mapel: 'ipas',
                     Jenis_Asesmen: 'ASAS Semester 1',
                     Tipe_Soal: 'essay',
                     Poin: 25,
@@ -1670,7 +1769,7 @@
                                 .filter(o => o !== '');
                             const keyLetter = rawKey.toUpperCase();
                             qObj.answer = letterToIdx[keyLetter] !== undefined ? letterToIdx[keyLetter] : 0;
-                        } 
+                        }
                         else if (tipe === 'pgk') {
                             qObj.options = [row.Opsi_A, row.Opsi_B, row.Opsi_C, row.Opsi_D]
                                 .map(o => String(o || '').trim())
@@ -1678,7 +1777,7 @@
                             qObj.answer = rawKey.split(',')
                                 .map(k => letterToIdx[k.trim().toUpperCase()])
                                 .filter(idx => idx !== undefined);
-                        } 
+                        }
                         else if (tipe === 'matching') {
                             const pairs = [];
                             rawKey.split('|').forEach(pairStr => {
@@ -1689,12 +1788,12 @@
                             });
                             qObj.pairs = pairs;
                             qObj.distractors = [];
-                        } 
+                        }
                         else if (tipe === 'short') {
                             const ansList = rawKey.split('|').map(a => a.trim()).filter(a => a !== '');
                             qObj.acceptedAnswers = ansList;
                             qObj.displayAnswer = ansList[0] || rawKey;
-                        } 
+                        }
                         else if (tipe === 'essay') {
                             qObj.keywords = rawKey.split(',').map(k => k.trim()).filter(k => k !== '');
                             qObj.rubricAnswer = String(row.Rubrik_Uraian || rawKey).trim();
@@ -1708,7 +1807,6 @@
                         throw new Error('Tidak ditemukan soal valid. Pastikan kolom Kode_Mapel dan Pertanyaan terisi.');
                     }
 
-                    // Simpan ke Cloud Firestore per mata pelajaran agar otomatis tersinkron ke semua siswa
                     if (db && currentUser) {
                         for (const mapelKey of Object.keys(newBank)) {
                             const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'question_banks', mapelKey);
@@ -1766,7 +1864,7 @@
         function exportCustomBankJS() {
             if (Object.keys(cloudQuestionBank).length === 0) return;
             const formattedCode = JSON.stringify(cloudQuestionBank, null, 2);
-            
+
             const tempArea = document.createElement('textarea');
             tempArea.value = formattedCode;
             document.body.appendChild(tempArea);
