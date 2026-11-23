@@ -10,7 +10,7 @@
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Portal Latihan Asesmen SD Kelas 6">
     <meta property="og:title" content="Bank Soal Latihan Asesmen Kelas 6 SD">
-    <meta property="og:description" content="Latihan soal ASAS dan ASAJ online 11 Mata Pelajaran lengkap dengan nilai otomatis & pembahasan.">
+    <meta property="og:description" content="Latihan soal ASAS dan ASAJ online 12 Mata Pelajaran lengkap dengan nilai otomatis & pembahasan.">
     <meta property="og:image" content="opengrap_app.jpg">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
@@ -19,7 +19,7 @@
     <!-- Twitter / Universal Card Fallback -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Bank Soal Latihan Asesmen Kelas 6 SD">
-    <meta name="twitter:description" content="Latihan soal online 11 Mata Pelajaran lengkap dengan perolehan nilai dan pembahasan otomatis.">
+    <meta name="twitter:description" content="Latihan soal online 12 Mata Pelajaran lengkap dengan perolehan nilai dan pembahasan otomatis.">
     <meta name="twitter:image" content="opengrap_app.jpg">
 
     <script src="https://cdn.tailwindcss.com"></script>
@@ -100,7 +100,10 @@
                         <label class="block text-xs font-bold text-slate-700 uppercase mb-1.5">Kelas <span class="text-red-500">*</span></label>
                         <select id="input-class" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 outline-none text-sm font-medium bg-white">
                             <option value="">-- Pilih Kelas --</option>
-                            <option value="6">Kelas 6</option>
+                            <option value="6A">Kelas 6A</option>
+                            <option value="6B">Kelas 6B</option>
+                            <option value="6C">Kelas 6C</option>
+                            <option value="6D">Kelas 6D</option>
                         </select>
                     </div>
                     <div>
@@ -113,9 +116,9 @@
                     </div>
                 </div>
 
-                <!-- Pilihan 11 Mata Pelajaran -->
+                <!-- Pilihan 12 Mata Pelajaran -->
                 <div class="space-y-3 pt-2">
-                    <label class="block text-xs font-bold text-slate-700 uppercase">Pilih Mata Pelajaran (11 Mapel) <span class="text-red-500">*</span></label>
+                    <label class="block text-xs font-bold text-slate-700 uppercase">Pilih Mata Pelajaran (12 Mapel) <span class="text-red-500">*</span></label>
                     <div id="subject-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
                 </div>
 
@@ -456,7 +459,7 @@
                         <i class="fa-solid fa-circle-info text-blue-600"></i> Aturan Penulisan di Kolom Excel
                     </h4>
                     <ul class="list-disc pl-5 space-y-1.5 text-xs text-slate-700 leading-relaxed">
-                        <li><strong>Kode_Mapel:</strong> Isi dengan kode: <code class="bg-white px-1 rounded border">pai</code>, <code class="bg-white px-1 rounded border">pancasila</code>, <code class="bg-white px-1 rounded border">ipas</code>, <code class="bg-white px-1 rounded border">matematika</code>, <code class="bg-white px-1 rounded border">bindo</code>, <code class="bg-white px-1 rounded border">binggris</code>, <code class="bg-white px-1 rounded border">bsunda</code>, <code class="bg-white px-1 rounded border">koding</code>, <code class="bg-white px-1 rounded border">plh</code>, <code class="bg-white px-1 rounded border">senibudaya</code>, atau <code class="bg-white px-1 rounded border">btq</code>.</li>
+                        <li><strong>Kode_Mapel:</strong> Isi dengan kode: <code class="bg-white px-1 rounded border">pai</code>, <code class="bg-white px-1 rounded border">pancasila</code>, <code class="bg-white px-1 rounded border">ipas</code>, <code class="bg-white px-1 rounded border">matematika</code>, <code class="bg-white px-1 rounded border">bindo</code>, <code class="bg-white px-1 rounded border">binggris</code>, <code class="bg-white px-1 rounded border">bsunda</code>, <code class="bg-white px-1 rounded border">koding</code>, <code class="bg-white px-1 rounded border">plh</code>, <code class="bg-white px-1 rounded border">senibudaya</code>, <code class="bg-white px-1 rounded border">btq</code>, atau <code class="bg-white px-1 rounded border">pjok</code>.</li>
                         <li><strong>Jenis_Asesmen:</strong> Isi dengan <code class="bg-white px-1 rounded border">ASAS Semester 1</code>, <code class="bg-white px-1 rounded border">ASAS Semester 2</code>, atau <code class="bg-white px-1 rounded border">Asesmen Sumatif Akhir Jenjang</code>.</li>
                         <li><strong>Tipe_Soal & Kunci_Jawaban:</strong>
                             <code class="bg-white px-1 rounded border">pg</code> (A/B/C/D) •
@@ -486,7 +489,7 @@
                         <div>
                             <label class="block text-[11px] font-bold text-slate-500 uppercase mb-1">Filter Mata Pelajaran</label>
                             <select id="filter-rekap-subject" onchange="renderRekapTable()" class="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-xs font-semibold outline-none">
-                                <option value="ALL">Semua Mata Pelajaran (11 Mapel)</option>
+                                <option value="ALL">Semua Mata Pelajaran (12 Mapel)</option>
                             </select>
                         </div>
                         <div>
@@ -583,8 +586,7 @@
         let isAdminAuthenticated = false;
         let studentScoresList = [];
         let cloudQuestionBank = {};
-
-        // 1. DAFTAR 11 MATA PELAJARAN SESUAI PERMINTAAN
+        // 1. DAFTAR 12 MATA PELAJARAN SESUAI PERMINTAAN
         const SUBJECTS = [
             { id: 'pai', name: 'PAI', icon: 'fa-mosque', color: 'bg-emerald-100 text-emerald-700' },
             { id: 'pancasila', name: 'Pendidikan Pancasila', icon: 'fa-shield-halved', color: 'bg-red-100 text-red-700' },
@@ -596,7 +598,8 @@
             { id: 'koding', name: 'Koding dan KA', icon: 'fa-robot', color: 'bg-purple-100 text-purple-700' },
             { id: 'plh', name: 'Pendidikan Lingkungan Hidup', icon: 'fa-seedling', color: 'bg-lime-100 text-lime-700' },
             { id: 'senibudaya', name: 'Seni Budaya', icon: 'fa-palette', color: 'bg-pink-100 text-pink-700' },
-            { id: 'btq', name: 'Baca Tulis Quran', icon: 'fa-book-quran', color: 'bg-teal-100 text-teal-700' }
+            { id: 'btq', name: 'Baca Tulis Quran', icon: 'fa-book-quran', color: 'bg-teal-100 text-teal-700' },
+            { id: 'pjok', name: 'PJOK', icon: 'fa-person-running', color: 'bg-sky-100 text-sky-700' }
         ];
 
         // 2. BANK SOAL CONTOH (MENDUKUNG GAMBAR DI SOAL & PEMBAHASAN)
